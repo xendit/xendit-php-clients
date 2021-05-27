@@ -17,6 +17,8 @@ use GuzzleHttp\Client as Guzzle;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\RequestOptions;
 use Xendit\Exceptions\ApiException;
+use Xendit\Exceptions\ApiValidationException;
+use Xendit\Exceptions\ApiValidationExceptionErrors;
 use Xendit\Xendit;
 
 /**
@@ -88,14 +90,14 @@ class GuzzleClient implements ClientInterface
         $opts['params'] = $params;
 
         $response = $this->_executeRequest($opts, $url);
-        
+
         $rbody = $response[0];
         $rcode = $response[1];
         $rheader = $response[2];
 
         return [$rbody, $rcode, $rheader];
     }
-    
+
     /**
      * Execute request
      *
@@ -133,7 +135,7 @@ class GuzzleClient implements ClientInterface
             $rbody = json_decode($response->getBody()->getContents(), true);
             $rcode = $response->getStatusCode();
             $rheader = $response->getHeaders();
-    
+
             self::_handleAPIError(
                 array('body' => $rbody,
                       'code' => $rcode,
@@ -159,10 +161,26 @@ class GuzzleClient implements ClientInterface
     private static function _handleAPIError($response)
     {
         $rbody = $response['body'];
-        
+
         $rhttp = strval($response['code']);
         $message = $rbody['message'];
         $rcode = $rbody['error_code'];
+
+        if ($rcode === 'API_VALIDATION_ERROR') {
+            $rawValidationErrors = $rbody['errors'] ?? [];
+            $validationErrors    = [];
+
+            foreach ($rawValidationErrors as $rawValidationError) {
+                $validationError = new ApiValidationExceptionErrors(
+                    $rawValidationError['path'],
+                    $rawValidationError['message']
+                );
+
+                array_push($validationErrors, $validationError);
+            }
+
+            throw new ApiValidationException($message, $rhttp, $rcode, $validationErrors);
+        }
 
         throw new ApiException($message, $rhttp, $rcode);
     }

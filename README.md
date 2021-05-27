@@ -58,6 +58,7 @@ This library is the abstraction of Xendit API for access from applications writt
 -   [Exceptions](#exceptions)
     -   [InvalidArgumentException](#invalidargumentexception)
     -   [ApiException](#apiexception)
+    -   [ApiValidationException](#apivalidationexception)
 -   [Contributing](#contributing)
     -   [Test](#tests)
         -   [Running test suite](#running-test-suite)
@@ -925,6 +926,23 @@ try {
     $getInvoice = \Xendit\Invoice::retrieve('123');
 } catch (\Xendit\Exceptions\ApiException $e) {
     var_dump($e->getErrorCode());
+}
+```
+
+### ApiValidationException
+
+`ApiValidationException` is the subset of [`ApiException`](#apiexception) that will be thrown in case of invalid parameters in the requests. Compared to `ApiException`, `ApiValidationException` has additional information of the list of invalid parameters and the reason why they are invalid.
+
+To get the list of invalid parameters:
+
+```php
+try {
+    $getInvoice = \Xendit\EWallets::create($params);
+} catch (\Xendit\Exceptions\ApiValidationException $e) {
+    foreach ($e->getValidationErrors() as $validationError) {
+        var_dump($validationError->getPath()); // the location of the invalid parameter in the request
+        var_dump($validationError->getMessage()); // the reason why the parameter is invalid
+    }
 }
 ```
 
